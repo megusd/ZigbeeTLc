@@ -151,7 +151,7 @@ const u8 xbr818_regs_init[] = {
 	0x23, 0xc0,	// pin_ctl[7:0] INT_IRQ pin: io_value_out & light_flag inverted
 				// b[7:4] 0xc io_value_out & light_flag inverted :pin_ctl[11]
 				// b[3:0] IO_VAL pin output select 0x0:io_value_out & light_flag
-	0x1c, 0x55, // io_timer_ctl
+	0x1c, 0x75, // io_timer_ctl
 				// b[7:6] Reserved
 				// b[5] t1 value select: 0: configure by pin, 1:configure by CPU register
 				// b[4:3] timer interrupt output select: 10: 1 hour

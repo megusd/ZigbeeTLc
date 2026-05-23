@@ -154,9 +154,7 @@ typedef struct {
  *  @brief Defined for Occupancy cluster attributes
  */
 typedef struct {
-#if !USE_SENSOR_XBR818
 	ev_timer_event_t *timerEvt;
-#endif
 	u16 delay;
 	u8  occupancy;
 	u8  sensor_type;
