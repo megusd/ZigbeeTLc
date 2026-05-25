@@ -8,6 +8,7 @@
  ****************************************************************/
 #include "tl_common.h"
 #include "app_utils.h"
+#include "device.h"
 
 #if USE_PRINTF
 
@@ -244,6 +245,49 @@ int sws_printf(const char *format, ...)
     va_end(arg_ptr);
 
     return 0;
+}
+
+/* SWS debug runtime control */
+#ifndef SWS_DEBUG_TIMEOUT_SEC
+#define SWS_DEBUG_TIMEOUT_SEC 300 /* default 5 minutes */
+#endif
+
+static ev_timer_event_t *sws_debug_timer = NULL;
+static int sws_debug_enabled = 0;
+
+static s32 sws_debug_timeout_cb(void *arg)
+{
+	(void)arg;
+	sws_disable_debug();
+	return -1; // stop timer
+}
+
+void sws_enable_debug(unsigned int timeout_sec)
+{
+	if (!sws_debug_enabled) {
+		sws_init();
+		sws_debug_enabled = 1;
+		sws_puts("SWS: debug enabled\n");
+	}
+	if (sws_debug_timer) {
+		TL_ZB_TIMER_CANCEL(&sws_debug_timer);
+	}
+	if (timeout_sec == 0) timeout_sec = SWS_DEBUG_TIMEOUT_SEC;
+	sws_debug_timer = TL_ZB_TIMER_SCHEDULE(sws_debug_timeout_cb, NULL, timeout_sec * 1000);
+}
+
+void sws_disable_debug(void)
+{
+	if (sws_debug_timer) {
+		TL_ZB_TIMER_CANCEL(&sws_debug_timer);
+	}
+	/* flush any pending data and close SWS */
+	sws_buffer_flush();
+	psws_buffer->len = SWS_BUF_CLOSED;
+	if (sws_debug_enabled) {
+		sws_debug_enabled = 0;
+		sws_puts("SWS: debug disabled\n");
+	}
 }
 
 #endif // USE_PRINTF

@@ -337,4 +337,18 @@
         ],
         "url": "https://github.com/pvvx/ZigbeeTLc/raw/refs/heads/master/bin/1141-0233-01383001-ZG204ZV.zigbee"
     }
+    ,
+    {
+        "fileVersion": 20459522,
+        "fileSize": 132178,
+        "manufacturerCode": 4417,
+        "imageType": 564,
+        "sha512": "2c57bfc35cc0be03fe2a35a8e018038799beaac68c66cc384f42021fea8145cc97baa2e336b391711dcdddf3cae5444387c11101a83bb1b74c4e22c5fc1e1625",
+        "otaHeaderString": "HOBEIAN:ZG-204ZV-d",
+        "modelId": "ZG-204ZV-d",
+        "manufacturerName": [
+            "HOBEIAN"
+        ],
+        "url": "https://raw.githubusercontent.com/megusd/ZigbeeTLc/master/bin/1141-0234-01383002-ZG204ZV-d.zigbee"
+    }
 ]

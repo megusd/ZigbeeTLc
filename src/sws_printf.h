@@ -75,6 +75,11 @@ int sws_printf(const char *format, ...);
 
 void sws_print_hex_dump(void * pdata, int len);
 
+/* Enable SWS debug mode for `timeout_sec` seconds (runtime only).
+ * When enabled, SWS buffer remains open for immediate access.
+ * Use `0` for no timeout (not recommended). */
+void sws_enable_debug(unsigned int timeout_sec);
+void sws_disable_debug(void);
 #else // USE_PRINTF
 
 #define sws_init()

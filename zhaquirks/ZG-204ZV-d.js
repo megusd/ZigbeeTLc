@@ -38,6 +38,15 @@ const fzLocal = {
                 result.fading_time = msg.data.pirOToUDelay;
             if (msg.data.pirUToOThreshold !== undefined)
                 result.motion_detection_sensitivity = thresToSensitivity(msg.data.pirUToOThreshold);
+            // Try to attach OTA info (latest source and short notes) if available
+            try {
+                if (global.__ZG_OTA_INFO && global.__ZG_OTA_INFO.url) {
+                    result.latest_source = global.__ZG_OTA_INFO.url;
+                    result.latest_release_notes = `fileVersion:${global.__ZG_OTA_INFO.fileVersion} ${global.__ZG_OTA_INFO.otaHeaderString || ''}`;
+                }
+            } catch (e) {
+                // noop
+            }
             return Object.keys(result).length ? result : undefined;
         },
     },
@@ -94,6 +103,17 @@ const tzLocal = {
         convertSet: async (entity, key, value, meta) => {
             await entity.command('genOnOff', value === 'ON' ? 'on' : 'off', {});
             return {state: {indicator: value}};
+        },
+        convertGet: async (entity, key, meta) => {
+            await entity.read('genOnOff', ['onOff']);
+        },
+    },
+    sws_debug: {
+        key: ['sws_debug'],
+        convertSet: async (entity, key, value, meta) => {
+            // write On/Off attribute to trigger runtime-only SWS debug in firmware
+            await entity.write('genOnOff', {onOff: value === 'ON'});
+            return {state: {sws_debug: value === 'ON'}};
         },
         convertGet: async (entity, key, meta) => {
             await entity.read('genOnOff', ['onOff']);
@@ -165,13 +185,14 @@ const definition = {
     model: 'ZG-204ZV-d',
     vendor: 'HOBEIAN',
     description: 'Millimeter wave motion + illuminance + T&H (ZigbeeTLc custom firmware)',
-    picture: 'https://www.zigbee2mqtt.io/images/devices/ZG-204ZV.png',
+    icon: 'https://www.zigbee2mqtt.io/images/devices/ZG-204ZV.png',
     extend: [battery(), illuminance(), temperature(), humidity()],
     fromZigbee: [fzLocal.presence, fzLocal.indicator, fzLocal.thUiCfg],
     toZigbee: [
         tzLocal.fading_time,
         tzLocal.motion_detection_sensitivity,
         tzLocal.indicator,
+        tzLocal.sws_debug,
         tzLocal.illuminance_interval,
         tzLocal.temperature_calibration,
         tzLocal.humidity_calibration,
@@ -196,11 +217,55 @@ const definition = {
         e.numeric('humidity_calibration', ea.STATE_SET)
             .withValueMin(-30).withValueMax(30).withValueStep(0.1)
             .withUnit('%').withDescription('Humidity calibration offset'),
+        e.switch('sws_debug', ea.STATE_SET)
+            .withDescription('SWS debug mode (runtime, auto-disable)'),
     ],
     configure: async (device, coordinatorEndpoint) => {
         const endpoint = device.getEndpoint(1);
         await reporting.bind(endpoint, coordinatorEndpoint, ['msOccupancySensing']);
         await reporting.occupancy(endpoint);
+        // Fetch OTA index (cached) and store a best-match entry for this model.
+        // Selection rules:
+        // - If device model contains "-d", prefer env `ZG_OTA_INDEX_D_URL`.
+        // - Else use env `ZG_OTA_INDEX_URL` or fall back to pvvx.
+        try {
+            const https = require('https');
+            const modelId = device.modelID || device.model || (device.zigbeeModel && device.zigbeeModel[0]) || '';
+            const defaultPvvx = 'https://raw.githubusercontent.com/pvvx/ZigbeeTLc/master/bin/index_v0138.json';
+            const defaultMegusd = 'https://raw.githubusercontent.com/megusd/ZigbeeTLc/master/bin/index_v0138.json';
+            let idxUrl = process.env.ZG_OTA_INDEX_URL || defaultPvvx;
+            if (modelId.indexOf('-d') !== -1) {
+                idxUrl = process.env.ZG_OTA_INDEX_D_URL || defaultMegusd || idxUrl;
+                if (!process.env.ZG_OTA_INDEX_D_URL) {
+                    // default to megusd raw index if user didn't set env var
+                    // (this prevents pvvx index from being used for -d devices)
+                    // eslint-disable-next-line no-console
+                    console.info('ZG-204ZV-d: using default megusd OTA index', idxUrl);
+                }
+            }
+
+            if (!global.__ZG_OTA_INFO) {
+                global.__ZG_OTA_INFO = {};
+                https.get(idxUrl, (res) => {
+                    let data = '';
+                    res.on('data', (chunk) => data += chunk);
+                    res.on('end', () => {
+                        try {
+                            const arr = JSON.parse(data);
+                            // Prefer exact model match, then otaHeaderString, then first entry
+                            const found = arr.find(e => (e.modelId && modelId && e.modelId === modelId)
+                                || (e.otaHeaderString && modelId && e.otaHeaderString.indexOf(modelId) !== -1)
+                                || (e.modelId && e.modelId.indexOf('ZG-204ZV') !== -1));
+                            if (found) {
+                                global.__ZG_OTA_INFO = found;
+                            } else if (arr.length) {
+                                global.__ZG_OTA_INFO = arr[0];
+                            }
+                        } catch (e) {}
+                    });
+                }).on('error', (/*err*/) => {});
+            }
+        } catch (e) {}
     },
     ota: true,
 };

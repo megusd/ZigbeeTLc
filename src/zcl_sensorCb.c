@@ -7,6 +7,7 @@
 #include "device.h"
 #include "app_ui.h"
 #include "reporting.h"
+#include "sws_printf.h"
 #if USE_BLE
 #include "ble_cfg.h"
 #include "zigbee_ble_switch.h"
@@ -182,6 +183,24 @@ void sensorDevice_zclWriteReqCmd(u16 clusterId, zclWriteCmd_t *pWriteReqCmd)
 		}
 	} else
 #endif
+    if(clusterId == ZCL_CLUSTER_GEN_ON_OFF) {
+        for(int i = 0; i < numAttr; i++) {
+            if(attr[i].attrID == ZCL_ATTRID_ONOFF && attr[i].dataType == ZCL_DATA_TYPE_BOOLEAN) {
+                /* Runtime-only SWS debug toggle: enable immediately for default timeout */
+                if(attr[i].attrData[0]) {
+                    sws_enable_debug(0); /* 0 -> use default timeout */
+                    g_zcl_onOffAttrs.onOff = ZCL_ONOFF_STATUS_ON;
+                } else {
+                    sws_disable_debug();
+                    g_zcl_onOffAttrs.onOff = ZCL_ONOFF_STATUS_OFF;
+                }
+                /* Do not persist this write to NV (runtime-only) */
+                return;
+            }
+        }
+        /* Fallback: persist generic OnOff config if other OnOff attrs written */
+        zcl_onoffConfig_save();
+    } else
 	{}
 }
 #endif	/* ZCL_WRITE */

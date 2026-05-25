@@ -11,7 +11,7 @@
 
 #if (BOARD == BOARD_ZG204ZV)
 
-//#define SWS_PRINTF_MODE	1
+#define SWS_PRINTF_MODE	1
 
 #define DEV_SERVICES (SERVICE_ZIGBEE | SERVICE_LED | SERVICE_OTA | SERVICE_THS | SERVICE_PIR | SERVICE_ILLUMI)
 
@@ -88,7 +88,7 @@
 // PIR
 #define DEF_OCCUPANCY_DELAY		35	// sec (PIR sensor)
 
-#define PIR_ON				1
+#define PIR_ON				0
 #define GPIO_PIR			GPIO_PD7
 #define PD7_INPUT_ENABLE	1
 #define PD7_DATA_OUT		0
